@@ -46,6 +46,8 @@ usage()
 	echo -e "llvm-version=ver   - use this version of llvm"
 	echo -e "build-type=TYPE    - set Release/Debug build"
 	echo -e "build-stp          - build and use STP in KLEE"
+	echo -e "build-z3     			- build and use Z3 in KLEE"
+	echo -e "build-bitwuzla     - build and use Bitwuzla in KLEE"
 	echo -e "build-klee         - build KLEE (default: yes)"
 	echo -e "build-nidhugg      - build nidhugg bug-finding tool (default: no)"
 	echo -e "archive            - create a zip file with symbiotic"
@@ -92,6 +94,7 @@ WITH_LLVM_DIR=
 WITH_LLVMCBE='no'
 BUILD_STP='no'
 BUILD_Z3='no'
+BUILD_BITWUZLA='no'
 BUILD_SVF='no'
 BUILD_PREDATOR='no'
 BUILD_LLVM2C='yes'
@@ -102,7 +105,6 @@ BUILD_NIDHUGG="no"
 
 
 HAVE_32_BIT_LIBS=$(if check_32_bit; then echo "yes"; else echo "no"; fi)
-HAVE_Z3=$(if check_z3; then echo "yes"; else echo "no"; fi)
 HAVE_GTEST=$(if check_gtest; then echo "yes"; else echo "no"; fi)
 WITH_ZLIB=$(if check_zlib; then echo "no"; else echo "yes"; fi)
 ENABLE_TCMALLOC=$(if check_tcmalloc; then echo "on"; else echo "off"; fi)
@@ -159,6 +161,9 @@ while [ $# -gt 0 ]; do
 		;;
 		build-stp)
 			BUILD_STP="yes"
+		;;
+		build-bitwuzla)
+			BUILD_BITWUZLA="yes"
 		;;
 		build-z3)
 			BUILD_Z3="yes"
@@ -226,7 +231,7 @@ fi
 
 
 
-if [ "$HAVE_Z3" = "no" -a "$BUILD_STP" = "no" ]; then
+if [ "$BUILD_Z3" = "no" -a "$BUILD_STP" = "no" -a "$BUILD_BITWUZLA" = "no"]; then
 	if [ ! -d "z3" ]; then
 		BUILD_Z3="yes"
 		echo "Will build z3 as it is missing in the system"
@@ -351,8 +356,8 @@ check()
 		fi
 	fi
 
-	if [ "$BUILD_STP" = "no" -a "$HAVE_Z3" = "no" -a "$BUILD_Z3" = "no" ]; then
-		exitmsg "Need z3 from package or enable building STP or Z3 by using 'build-stp' or 'build-z3' argument."
+	if [ "$BUILD_STP" = "no" -a "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
+		exitmsg "Need z3 from package or enable building STP or Z3 or Bitwuzla by using 'build-stp' or 'build-z3' or 'build-bitwuzla' argument."
 	fi
 
 }
@@ -512,8 +517,6 @@ if [ ! -f $LLVM_DIR/LLVMConfig.cmake ]; then
 	exitmsg "Cannot find LLVMConfig.cmake file in the directory $LLVM_DIR"
 fi
 
-LLVM_CONFIG=${ABS_SRCDIR}/llvm-${LLVM_VERSION}/build/bin/llvm-config
-
 # detect the link type of LLVM that we use
 if [ "$($LLVM_CONFIG --shared-mode --libs)" = "shared" ]; then
     LLVM_DYLIB="on"
@@ -571,7 +574,7 @@ if [ $FROM -le 1 ]; then
 	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
 	pushd build-${LLVM_VERSION} || exitmsg "error"
 
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 			-DCMAKE_INSTALL_LIBDIR:PATH=lib \
@@ -583,7 +586,7 @@ if [ $FROM -le 1 ]; then
 			-DCMAKE_INSTALL_RPATH="\$ORIGIN/../lib" \
 			${SVF_FLAGS} \
 			|| clean_and_exit 1 "git"
-	fi
+	# fi
 
 	(build && make install) || exitmsg "Building and installing DG"
 	popd
@@ -700,6 +703,29 @@ fi # BUILD_STP
 
 if [ "`pwd`" != $ABS_SRCDIR ]; then
 	exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
+fi
+
+######################################################################
+#   Bitwuzla
+######################################################################
+if [ "$BUILD_BITWUZLA" = "yes" ]; then
+	if [ $FROM -le 4  -a "$BUILD_KLEE" = "yes" ]; then
+		if [ ! -d bitwuzla ]; then
+			git_clone_or_pull https://github.com/bitwuzla/bitwuzla.git -b "0.3.2" bitwuzla
+		fi
+
+		pip3 install meson
+		
+		pushd bitwuzla
+		# if [ ! -d build ]; then
+			./configure.py --shared --no-unit-testing --prefix="$PREFIX" ${BUILD_TYPE,,}
+			pushd build && ninja install
+			popd
+		# fi
+		popd
+
+		export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$ABS_SRCDIR/bitwuzla/build/meson-private"
+	fi
 fi
 
 ######################################################################

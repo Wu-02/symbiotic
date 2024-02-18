@@ -152,6 +152,10 @@ if [ "$BUILD_Z3" = "yes" ]; then
 	LIBRARIES="$LIBRARIES $PREFIX/lib/libz3*.so*"
 fi
 
+if [ "$BUILD_BITWUZLA" = "yes" ]; then
+	LIBRARIES="$LIBRARIES $PREFIX/lib/x86_64-linux-gnu/libbitwuzla*.so*"
+fi
+
 # strip binaries unless we are in a CI job, it will save us 500 MB
 if [ -z "$CI" ]; then
 	for B in $BINARIES $LIBRARIES; do

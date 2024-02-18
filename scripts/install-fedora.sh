@@ -2,7 +2,7 @@
 
 set -e
 
-PACKAGES="curl wget rsync make cmake unzip tar patch glibc-devel.i686 xz zlib python"
+PACKAGES="curl wget rsync make cmake unzip tar patch glibc-devel.i686 xz zlib python3 python3-pip ninja-build"
 
 # install clang if there is not suitable compiler
 if ! g++ --version &>/dev/null; then

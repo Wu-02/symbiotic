@@ -95,8 +95,7 @@ git_submodule_init()
 {
 	cd "$SRCDIR"
 
-	git submodule init || exitmsg "submodule init failed"
-	git submodule update || exitmsg "submodule update failed"
+	git submodule update --init --recursive || exitmsg "submodule update failed"
 
 	cd -
 }

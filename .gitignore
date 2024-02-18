@@ -18,6 +18,10 @@ tags
 Makefile
 CMakeFiles
 CMakeCache.txt
+z3/
+bitwuzla/
+predator-*/
+symbiotic.zip
 
 *.ninja
 .ninja*

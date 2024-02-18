@@ -12,7 +12,8 @@
 	ignore = untracked
 [submodule "klee"]
 	path = klee
-	url = https://github.com/staticafi/JetKlee
+	url = https://github.com/UnitTestBot/klee.git
+	branch = testcomp24
 [submodule "llvm2c"]
 	path = llvm2c
 	url = https://github.com/staticafi/llvm2c

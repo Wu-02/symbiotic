@@ -13,16 +13,21 @@ pushd klee/build-${LLVM_VERSION}
 # 	STP_FLAGS="-DENABLE_SOLVER_STP=ON -DSTP_DIR=${ABS_SRCDIR}/stp"
 # fi
 STP_FLAGS="-DENABLE_SOLVER_STP=OFF"
+Z3_FLAGS="-DENABLE_SOLVER_Z3=OFF"
+BITWUZLA_FLAGS="-DENABLE_SOLVER_BITWUZLA=OFF"
 
-Z3_FLAGS=
-if [ "$HAVE_Z3" = "yes" -o "$BUILD_Z3" = "yes" ]; then
-	Z3_FLAGS=-DENABLE_SOLVER_Z3=ON
+if [ "$BUILD_Z3" = "yes" ]; then
+	Z3_FLAGS="-DENABLE_SOLVER_Z3=ON"
 	if [ -d ${ABS_SRCDIR}/z3 ]; then
 		Z3_FLAGS="$Z3_FLAGS -DCMAKE_LIBRARY_PATH=${ABS_SRCDIR}/z3/build/"
 		Z3_FLAGS="$Z3_FLAGS -DCMAKE_INCLUDE_PATH=${ABS_SRCDIR}/z3/src/api"
 	fi
-else
-	exitmsg "KLEE needs Z3 library"
+fi
+if [ "$BUILD_BITWUZLA" = "yes" ]; then
+	BITWUZLA_FLAGS="-DENABLE_SOLVER_BITWUZLA=ON"
+fi
+if [ "$HAVE_Z3" = "no" -a "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
+	exitmsg "KLEE needs Z3 or Bitwuzla library"
 fi
 
 if [ ! -d CMakeFiles ]; then
@@ -58,7 +63,7 @@ if [ ! -d CMakeFiles ]; then
 		-DENABLE_UNIT_TESTS=${ENABLE_TESTS} \
 		-DENABLE_SYSTEM_TESTS=${ENABLE_TESTS} \
 		-DENABLE_TCMALLOC=${ENABLE_TCMALLOC} \
-		$ZLIB_FLAGS $Z3_FLAGS $STP_FLAGS ${EXTRA_FLAGS}\
+		$ZLIB_FLAGS $Z3_FLAGS $STP_FLAGS $BITWUZLA_FLAGS ${EXTRA_FLAGS}\
 		|| clean_and_exit 1 "git"
 fi
 

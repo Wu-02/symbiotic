@@ -4,7 +4,7 @@ set -e
 
 PACKAGES=""
 
-for PKG in curl wget rsync make cmake unzip lib32-glibc xz python; do
+for PKG in curl wget rsync make cmake unzip lib32-glibc xz python3 python3-pip ninja-build; do
 	if ! pacman -Qq | grep -q $PKG; then
 		PACKAGES="$PACKAGES $PKG"
 	fi
