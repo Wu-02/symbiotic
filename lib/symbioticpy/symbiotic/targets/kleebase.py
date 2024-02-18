@@ -150,8 +150,8 @@ def _parseKtest(pathFile):
         sys.exit(1)
     version, = unpack('>i', f.read(4))
     if version > 3:
-        print('unrecognized version')
-        sys.exit(1)
+       print('unrecognized version')
+       sys.exit(1)
     # skip args
     numArgs, = unpack('>i', f.read(4))
     for i in range(numArgs):
@@ -206,9 +206,9 @@ def dump_error(pth):
         print('\n --- Error trace ---\n')
         for line in f:
             print_stdout(line, print_nl = False)
-        print('\n --- Sequence of non-deterministic values [function:file:line:col] ---\n')
-        _dumpObjects(pth[:pth.find('.')+1]+'ktest')
-        print('\n --- ----------- ---')
+        # print('\n --- Sequence of non-deterministic values [function:file:line:col] ---\n')
+        # _dumpObjects(pth[:pth.find('.')+1]+'ktest')
+        # print('\n --- ----------- ---')
     except OSError as e:
         # this dumping is just for convenience,
         # so do not return any error
@@ -303,7 +303,7 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
     def __init__(self, opts):
         SymbioticBaseTool.__init__(self, opts)
         self._options = opts
-        self._arguments = ['-dump-states-on-halt=0',
+        self._arguments = ['-dump-states-on-halt=none',
                            '--output-stats=0', '--use-call-paths=0',
                            '--optimize=false', '-silent-klee-assume=1',
                            '-istats-write-interval=60s',
@@ -311,9 +311,8 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
                            #'--output-istats=0',
                            '-only-output-states-covering-new=1',
                            '-use-forked-solver=0',
-                           '--libc=klee',
-                           '--lazy-init',
-                           '-external-calls=pure', '-max-memory=8000']
+                           '--libc=klee',                          
+                           '--mock-external-calls', '-max-memory=8000']
 
     def can_replay(self):
         """ Return true if the tool can do error replay """
