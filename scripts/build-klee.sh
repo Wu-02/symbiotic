@@ -30,7 +30,7 @@ if [ "$HAVE_Z3" = "no" -a "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
 	exitmsg "KLEE needs Z3 or Bitwuzla library"
 fi
 
-if [ ! -d CMakeFiles ]; then
+#if [ ! -d CMakeFiles ]; then
 	# use our zlib, if we compiled it
 	ZLIB_FLAGS=
 	if [ -d $ABS_RUNDIR/zlib ]; then
@@ -63,9 +63,11 @@ if [ ! -d CMakeFiles ]; then
 		-DENABLE_UNIT_TESTS=${ENABLE_TESTS} \
 		-DENABLE_SYSTEM_TESTS=${ENABLE_TESTS} \
 		-DENABLE_TCMALLOC=${ENABLE_TCMALLOC} \
+		-DENABLE_FLOATING_POINT=ON \
+		-DENABLE_FP_RUNTIME=ON \
 		$ZLIB_FLAGS $Z3_FLAGS $STP_FLAGS $BITWUZLA_FLAGS ${EXTRA_FLAGS}\
 		|| clean_and_exit 1 "git"
-fi
+#fi
 
 if [ "$UPDATE" = "1" ]; then
 	git fetch --all
