@@ -207,6 +207,7 @@ class SymbioticCC(object):
 
         # __inline attribute is buggy in clang, remove it using -D__inline
         cmd = self._get_cc() + ['-c', '-emit-llvm',
+                                '-fbracket-depth=1024',
                                 #'-include', 'symbiotic.h',
                                 # otherwise clang can drop so inline functions
                                 # e.g. push() in this file:
@@ -502,9 +503,9 @@ class SymbioticCC(object):
 
         if self.options.slicer_timeout > 0:
             cmd = ['timeout', str(self.options.slicer_timeout)] +\
-                   self.options.slicer_cmd + ['-c', ",".join(crit)] + opts
+                   self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + opts
         else:
-            cmd = self.options.slicer_cmd + ['-c', ",".join(crit)] + opts
+            cmd = self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + opts
 
         if self.options.slicer_pta in ['fi', 'fs']:
             cmd.append('-pta')

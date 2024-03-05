@@ -303,16 +303,21 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
     def __init__(self, opts):
         SymbioticBaseTool.__init__(self, opts)
         self._options = opts
-        self._arguments = ['-dump-states-on-halt=none',
-                           '--output-stats=0', '--use-call-paths=0',
+        self._arguments = ['--strip-unwanted-calls',
+                           '--emit-all-errors',
+                           '--mock-all-externals', '--external-calls=all',
+                           '-use-forked-solver=false',
+                           '--libc=klee',
+                           '--skip-not-lazy-initialized',
+                           '--write-ktests=true',
+                           '--use-sym-size-alloc=true',
+                           '--cex-cache-validity-cores',
+                           '--fp-runtime',
+                           '--dump-states-on-halt=none',
+                           '--output-stats=true', '--output-istats=true',
+                           '--use-call-paths=false',
                            '--optimize=false', '-silent-klee-assume=1',
-                           '-istats-write-interval=60s',
-                           '-timer-interval=10',
-                           #'--output-istats=0',
-                           '-only-output-states-covering-new=1',
-                           '-use-forked-solver=0',
-                           '--libc=klee',                          
-                           '--mock-external-calls', '-max-memory=8000']
+                           '--max-memory=8000']
 
     def can_replay(self):
         """ Return true if the tool can do error replay """

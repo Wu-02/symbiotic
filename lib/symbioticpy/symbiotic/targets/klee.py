@@ -128,10 +128,10 @@ class KleeToolFullInstrumentation(KleeBase):
         cmd = [executable] + self._arguments
 
         if opts.timeout is not None:
-               cmd.append('-max-time={0}'.format(opts.timeout))
+               cmd.append('--max-time={0}'.format(opts.timeout))
 
         if opts.exit_on_error:
-            cmd.append('-exit-on-error-type=Assert')
+            cmd.append('--exit-on-error-type=Assert')
 
         if not opts.nowitness:
             cmd.append('-write-witness')
@@ -339,12 +339,13 @@ class SymbioticTool(KleeBase):
             calls = [x for x in prop.getcalls() if x not in ['__VERIFIER_error', '__assert_fail']]
             if calls:
                 assert len(calls) == 1, "Multiple error functions unsupported yet"
-                # cmd.append('-error-fn={0}'.format(calls[0]))
+                cmd.append('--assert-fail-alias={0}'.format(calls[0]))
             # FIXME: append to all properties?
             # cmd.append('-malloc-symbolic-contents')
         elif prop.signedoverflow():
             # we instrument with __VERIFIER_error
-            cmd.append('-error-fn=__VERIFIER_error')
+            cmd.append('--assert-fail-alias=__VERIFIER_error')
+            pass
 
         if opts.exit_on_error:
             if prop.memsafety():
@@ -369,6 +370,14 @@ class SymbioticTool(KleeBase):
 
         if opts.executable_witness:
             cmd.append('-write-harness')
+
+        if opts.is32bit:
+            cmd +=  [
+                "--allocate-determ",
+                "--allocate-determ-size=4000",
+                "--allocate-determ-start-address=0x00030000000",
+                "--x86FP-as-x87FP80"
+            ]
 
         # we have the disassembly already (it may be a bit different,
         # but we may remove this switch during debugging)
