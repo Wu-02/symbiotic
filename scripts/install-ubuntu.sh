@@ -4,7 +4,7 @@ set -e
 
 apt-get update
 
-PACKAGES="curl wget rsync make cmake unzip gcc-multilib xz-utils python3 python3-pip zlib1g-dev git build-essential ninja-build pkg-config"
+PACKAGES="curl wget rsync make cmake unzip gcc-multilib xz-utils python3 python3-pip zlib1g-dev git build-essential ninja-build pkg-config libpolly-14-dev"
 
 # install clang if there is not suitable compiler
 if ! g++ --version &>/dev/null; then
