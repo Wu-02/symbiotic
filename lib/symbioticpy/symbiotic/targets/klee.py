@@ -253,10 +253,12 @@ class SymbioticTool(KleeBase):
         ]
 
     def passes_after_slicing(self):
+        passes = ['-kind-base-case', '-kind-max-backedge-count=100']
+        
         if self.FullInstr:
-            return self.FullInstr.passes_after_slicing()
+            return passes + self.FullInstr.passes_after_slicing()
 
-        return []
+        return passes
 
     def actions_after_compilation(self, symbiotic):
         if self.FullInstr:

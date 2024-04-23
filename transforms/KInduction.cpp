@@ -65,6 +65,28 @@ static RegisterPass<InductiveStep> IS(
     "kind-step-case", "Instrument loops for step case verification.");
 char InductiveStep::ID;
 
+void insertAssumption(Value *Arg, Instruction *I) {
+  Function *F = I->getParent()->getParent();
+  Module *M = F->getParent();
+  LLVMContext &Ctx = F->getContext();
+  IRBuilder<> IRB(Ctx);
+  IRB.SetInsertPoint(I);
+
+  AttrBuilder B(Ctx);
+  B.addAttribute(Attribute::NoUnwind);
+  B.addAttribute(Attribute::NoRecurse);
+  B.addAttribute(Attribute::OptimizeNone);
+  B.addAttribute(Attribute::NoInline);
+  // LLVM removed all calls to __VERIFIER_assume if marked as ReadNone
+  // or ReadOnly even if we mark it as OptimizeNone.
+  B.addAttribute(Attribute::InaccessibleMemOnly);
+  AttributeList as = AttributeList::get(Ctx, AttributeList::FunctionIndex, B);
+
+  auto AssumeFunc = M->getOrInsertFunction(
+      "__VERIFIER_assume", as, Type::getVoidTy(Ctx), Type::getInt1Ty(Ctx));
+  IRB.CreateCall(AssumeFunc, Arg);
+}
+
 bool InductiveBase::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (MaxBackedgeCount == 0) return false;
 
@@ -95,12 +117,9 @@ bool InductiveBase::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   Instruction *TermUnreachable = SplitBlockAndInsertIfThen(
       CmpInst, Header->getTerminator(), true, nullptr, &DT, &LI);
+  insertAssumption(ConstantInt::get(Type::getInt1Ty(Ctx), 0), TermUnreachable);
 
   B.SetInsertPoint(TermUnreachable);
-  FunctionType *assumeFuncType =
-      FunctionType::get(Type::getVoidTy(Ctx), Type::getInt32Ty(Ctx));
-  auto assumeFunc = M->getOrInsertFunction("__VERIFIER_assume", assumeFuncType);
-  B.CreateCall(assumeFunc);
   FunctionType *abortFuncType = FunctionType::get(Type::getVoidTy(Ctx), false);
   auto abortFunc = M->getOrInsertFunction("abort", abortFuncType);
   B.CreateCall(abortFunc);
@@ -108,8 +127,8 @@ bool InductiveBase::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   // Increment the counter by 1 at the end of latch.
   BasicBlock *Latch = L->getLoopLatch();
   B.SetInsertPoint(Latch->getTerminator());
-  Value *incCounter = B.CreateAdd(CounterPhi, ConstantInt::get(counterType,
-  1)); CounterPhi->addIncoming(incCounter, Latch);
+  Value *incCounter = B.CreateAdd(CounterPhi, ConstantInt::get(counterType, 1));
+  CounterPhi->addIncoming(incCounter, Latch);
 
   return true;
 }
