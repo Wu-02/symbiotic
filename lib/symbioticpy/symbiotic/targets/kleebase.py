@@ -304,7 +304,6 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
         SymbioticBaseTool.__init__(self, opts)
         self._options = opts
         self._arguments = ['--strip-unwanted-calls',
-                           '--emit-all-errors',
                            '--mock-all-externals', '--external-calls=all',
                            '-use-forked-solver=false',
                            '--libc=klee',
