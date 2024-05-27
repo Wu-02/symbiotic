@@ -216,6 +216,7 @@ class SymbioticTool(KleeBase):
             ('ELOADSYM', re.compile('.*ERROR: unable to load symbol.*')),
             ('EINVALINST', re.compile('.*LLVM ERROR: Code generator does not support.*')),
             ('EINITVALS', re.compile('.*unable to compute initial values.*')),
+            ('EINVALIDASSUME', re.compile('.*invalid klee_assume call.*')),
             ('ESYMSOL', re.compile('.*unable to get symbolic solution.*')),
             ('ESILENTLYCONCRETIZED', re.compile('.*silently concretizing.*')),
             ('EEXTRAARGS', re.compile('.*calling .* with extra arguments.*')),
@@ -251,9 +252,16 @@ class SymbioticTool(KleeBase):
             ('EUNREACH', re.compile('.*reached "unreachable" instruction.*')),
             ('ERESOLV', re.compile('.*ERROR:.*Could not resolve.*'))
         ]
-
+    
+    def actions_after_verification(self, verifier):
+        cc = verifier._cc
+        if self._options.phase == 2:
+            # recompile from source
+            cc.run()
+            verifier.curfile = cc.curfile
+        
     def passes_after_slicing(self):
-        passes = ['-kind-base-case', '-kind-max-backedge-count=100']
+        passes = []
         
         if self.FullInstr:
             return passes + self.FullInstr.passes_after_slicing()
@@ -412,7 +420,16 @@ class SymbioticTool(KleeBase):
                 return key
 
         return None
+    
+    def change_false_to_unknown_at_step_case(func):
+        def wrapper(self, *args):
+            result = func(self, *args)
+            if self._options.phase == 2 and result.startswith('false'):
+                return 'unknown'
+            return result
+        return wrapper
 
+    @change_false_to_unknown_at_step_case
     def determine_result(self, returncode, returnsignal, output, isTimeout):
         opts = self._options
         prop = opts.property
@@ -448,7 +465,7 @@ class SymbioticTool(KleeBase):
         found = []
         for line in output:
             fnd = self._parse_klee_output_line(str(line))
-            if fnd:
+            if fnd and fnd not in found:
                 found.append(fnd)
 
         if not found:
@@ -457,7 +474,8 @@ class SymbioticTool(KleeBase):
             # we haven't found anything
             return result.RESULT_TRUE_PROP
 
-        if 'EINITVALS' in found: # EINITVALS would break the validity of the found error
+        if 'EINITVALS' in found or 'EINVALIDASSUME' in found:
+            # break the validity of the found error
             return "{0}({1})".format(result.RESULT_UNKNOWN, " ".join(found))
 
         FALSE_REACH = result.RESULT_FALSE_REACH

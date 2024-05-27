@@ -47,7 +47,7 @@ clean_and_exit()
 	CODE="$1"
 
 	if [ "$2" = "git" ]; then
-		git clean -xdf
+		echo git clean -xdf
 	else
 		rm -rf *
 	fi

@@ -491,6 +491,8 @@ class SymbioticCC(object):
                 print_stdout(f)
 
     def slicer(self, add_params=[]):
+        output = '{0}-sliced.bc'.format(self.curfile[:self.curfile.rfind('.')])
+        
         if hasattr(self._tool, 'slicer_options'):
             crit, opts = self._tool.slicer_options()
         else:
@@ -498,14 +500,11 @@ class SymbioticCC(object):
 
         assert len(crit) > 0
 
-        output = '{0}.sliced'.format(self.curfile[:self.curfile.rfind('.')])
-
-
         if self.options.slicer_timeout > 0:
             cmd = ['timeout', str(self.options.slicer_timeout)] +\
-                   self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + opts
+                   self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + ['-o', output] + opts
         else:
-            cmd = self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + opts
+            cmd = self.options.slicer_cmd + ['-c', ",".join(crit)] + ['--preserved-functions', ','.join(crit)] + ['-o', output] + opts
 
         if self.options.slicer_pta in ['fi', 'fs']:
             cmd.append('-pta')
@@ -600,6 +599,7 @@ class SymbioticCC(object):
         llvmsrc = []
         options = self.options
         for source in self.sources:
+            print(source)
             if options.source_is_bc:
                 dbg("Treating '{0}' as LLVM bitcode (required)".format(source))
                 llvms = source

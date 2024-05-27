@@ -29,3 +29,6 @@ install_manifest.txt
 googletest
 llvm-*/
 lib/symbioticpy/symbiotic/versions.py
+
+*.vscode
+clam

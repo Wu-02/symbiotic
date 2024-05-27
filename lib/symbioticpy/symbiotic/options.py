@@ -29,7 +29,7 @@ class SymbioticOptions(object):
         # source codes
         self.sources = []
 
-        self.tool_name = 'klee'
+        self.tool_name = 'kleebmc'
         self.is32bit = False
         self.stats = False
         # generate ll or c as output

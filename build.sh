@@ -717,11 +717,11 @@ if [ "$BUILD_BITWUZLA" = "yes" ]; then
 		pip3 install meson
 		
 		pushd bitwuzla
-		# if [ ! -d build ]; then
-			./configure.py --shared --no-unit-testing --prefix="$PREFIX" ${BUILD_TYPE,,}
+		if [ ! -d build ]; then
+			./configure.py --static --no-unit-testing --prefix="$PREFIX"
 			pushd build && ninja install
 			popd
-		# fi
+		fi
 		popd
 
 		export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$ABS_SRCDIR/bitwuzla/build/meson-private"

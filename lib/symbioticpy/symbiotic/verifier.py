@@ -110,7 +110,12 @@ class SymbioticVerifier(object):
         prp = self.options.property.getPrpFile()
 
         # do it!
-        return self._run_tool(tool, prp, params, timeout)
+        res, watch = self._run_tool(tool, prp, params, timeout)
+        
+        if hasattr(tool, 'actions_after_verification'):
+            tool.actions_after_verification(self)
+        
+        return res, watch
 
     def run_verification(self):
         print_stdout('INFO: Starting verification', color='WHITE')

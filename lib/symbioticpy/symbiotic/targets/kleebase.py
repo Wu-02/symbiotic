@@ -315,8 +315,11 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
                            '--dump-states-on-halt=none',
                            '--output-stats=true', '--output-istats=true',
                            '--use-call-paths=false',
-                           '--optimize=false', '-silent-klee-assume=1',
+                           '--optimize=false',
                            '--max-memory=8000']
+        if hasattr(opts, 'phase') and opts.phase == 2:
+            self._arguments += ['-silent-klee-assume=1']
+
 
     def can_replay(self):
         """ Return true if the tool can do error replay """
