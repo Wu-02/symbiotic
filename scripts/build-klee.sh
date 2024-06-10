@@ -4,8 +4,8 @@ if [  "x$UPDATE" = "x1" -o -z "$(ls -A $SRCDIR/klee)" ]; then
 	git_submodule_init
 fi
 
-mkdir -p klee/build-${LLVM_VERSION}
-pushd klee/build-${LLVM_VERSION}
+pushd klee
+BASE="" BITWUZLA_VERSION="0.3.2" BITWUZLA_COMMIT="0.3.2" SOLVERS="bitwuzla" LLVM_VERSION=14 ENABLE_OPTIMIZED=1 ENABLE_DEBUG=0 DISABLE_ASSERTIONS=1 REQUIRES_RTTI=1 GTEST_VERSION=1.11.0 SQLITE_VERSION=3400100 UCLIBC_VERSION=klee_uclibc_v1.3 COVERAGE=0 KLEE_RUNTIME_BUILD=${BUILD_TYPE} USE_LIBCXX=0 USE_TCMALLOC=0 ENABLE_DOXYGEN=1 ./scripts/build/build.sh klee
 
 # Our version of KLEE does not work with STP now
 # STP_FLAGS=

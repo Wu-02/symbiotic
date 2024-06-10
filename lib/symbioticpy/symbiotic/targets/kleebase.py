@@ -206,9 +206,9 @@ def dump_error(pth):
         print('\n --- Error trace ---\n')
         for line in f:
             print_stdout(line, print_nl = False)
-        # print('\n --- Sequence of non-deterministic values [function:file:line:col] ---\n')
-        # _dumpObjects(pth[:pth.find('.')+1]+'ktest')
-        # print('\n --- ----------- ---')
+        print('\n --- Sequence of non-deterministic values [function:file:line:col] ---\n')
+        _dumpObjects(pth[:pth.find('.')+1]+'ktest')
+        print('\n --- ----------- ---')
     except OSError as e:
         # this dumping is just for convenience,
         # so do not return any error

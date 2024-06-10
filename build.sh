@@ -45,9 +45,6 @@ usage()
 	echo -e "with-llvm-src=path - use llvm sources from path"
 	echo -e "llvm-version=ver   - use this version of llvm"
 	echo -e "build-type=TYPE    - set Release/Debug build"
-	echo -e "build-stp          - build and use STP in KLEE"
-	echo -e "build-z3     			- build and use Z3 in KLEE"
-	echo -e "build-bitwuzla     - build and use Bitwuzla in KLEE"
 	echo -e "build-klee         - build KLEE (default: yes)"
 	echo -e "build-nidhugg      - build nidhugg bug-finding tool (default: no)"
 	echo -e "archive            - create a zip file with symbiotic"
@@ -105,9 +102,9 @@ BUILD_NIDHUGG="no"
 
 
 HAVE_32_BIT_LIBS=$(if check_32_bit; then echo "yes"; else echo "no"; fi)
-HAVE_GTEST=$(if check_gtest; then echo "yes"; else echo "no"; fi)
+# HAVE_GTEST=$(if check_gtest; then echo "yes"; else echo "no"; fi)
 WITH_ZLIB=$(if check_zlib; then echo "no"; else echo "yes"; fi)
-ENABLE_TCMALLOC=$(if check_tcmalloc; then echo "on"; else echo "off"; fi)
+# ENABLE_TCMALLOC=$(if check_tcmalloc; then echo "on"; else echo "off"; fi)
 
 ARCHIVE="no"
 FULL_ARCHIVE="no"
@@ -158,15 +155,6 @@ while [ $# -gt 0 ]; do
 		;;
 		with-zlib)
 			WITH_ZLIB="yes"
-		;;
-		build-stp)
-			BUILD_STP="yes"
-		;;
-		build-bitwuzla)
-			BUILD_BITWUZLA="yes"
-		;;
-		build-z3)
-			BUILD_Z3="yes"
 		;;
 		build-predator)
 			BUILD_PREDATOR="yes"
@@ -354,10 +342,6 @@ check()
 		if [ ! -d "$WITH_LLVM_DIR" ]; then
 			exitmsg "Invalid LLVM src directory given: $WITH_LLVM_DIR"
 		fi
-	fi
-
-	if [ "$BUILD_STP" = "no" -a "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
-		exitmsg "Need z3 from package or enable building STP or Z3 or Bitwuzla by using 'build-stp' or 'build-z3' or 'build-bitwuzla' argument."
 	fi
 
 }
@@ -651,141 +635,9 @@ if [ $FROM -le 2 -a $WITH_ZLIB = "yes" ]; then
 	cd -
 fi
 
-PHASE="building minisat and stp"
-if [ "$BUILD_STP" = "yes" ]; then
-	######################################################################
-	#   minisat
-	######################################################################
-	if [ $FROM -le 4  -a "$BUILD_KLEE" = "yes" ]; then
-		git_clone_or_pull git://github.com/stp/minisat.git minisat
-		pushd minisat
-		mkdir -p build
-		cd build || exitmsg "error"
-
-		# use our zlib, if we compiled it
-		ZLIB_FLAGS=
-		if [ -d $ABS_RUNDIR/zlib ]; then
-			ZLIB_FLAGS="-DZLIB_LIBRARY=-L${PREFIX}/lib;-lz"
-			ZLIB_FLAGS="$ZLIB_FLAGS -DZLIB_INCLUDE_DIR=$PREFIX/include"
-		fi
-
-		if [ ! -d CMakeFiles ]; then
-			cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX \
-				  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-					 -DSTATICCOMPILE=ON $ZLIB_FLAGS
-		fi
-
-		(make "$OPTS" && make install) || exitmsg  "Building and installing minisat"
-		popd
-	fi
-
-	######################################################################
-	#   STP
-	######################################################################
-	if [ $FROM -le 4  -a "$BUILD_KLEE" = "yes" ]; then
-		git_clone_or_pull git://github.com/stp/stp.git stp
-		cd stp || exitmsg "Cloning failed"
-		if [ ! -d CMakeFiles ]; then
-			cmake . -DCMAKE_INSTALL_PREFIX=$PREFIX \
-				-DCMAKE_INSTALL_LIBDIR:PATH=lib \
-				-DSTP_TIMESTAMPS:BOOL="OFF" \
-				-DCMAKE_CXX_FLAGS_RELEASE=-O2 \
-				-DCMAKE_C_FLAGS_RELEASE=-O2 \
-				-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
-				-DBUILD_SHARED_LIBS:BOOL=OFF \
-				-DENABLE_PYTHON_INTERFACE:BOOL=OFF || clean_and_exit 1 "git"
-		fi
-
-		(build "OPTIMIZE=-O2 CFLAGS_M32=install" && make install) || exitmsg  "Building and installing STP"
-		cd -
-	fi
-fi # BUILD_STP
-
 if [ "`pwd`" != $ABS_SRCDIR ]; then
 	exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
 fi
-
-######################################################################
-#   Bitwuzla
-######################################################################
-if [ "$BUILD_BITWUZLA" = "yes" ]; then
-	if [ $FROM -le 4  -a "$BUILD_KLEE" = "yes" ]; then
-		if [ ! -d bitwuzla ]; then
-			git_clone_or_pull https://github.com/bitwuzla/bitwuzla.git -b "0.3.2" bitwuzla
-		fi
-
-		pip3 install meson
-		
-		pushd bitwuzla
-		if [ ! -d build ]; then
-			./configure.py --static --no-unit-testing --prefix="$PREFIX"
-			pushd build && ninja install
-			popd
-		fi
-		popd
-
-		export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$ABS_SRCDIR/bitwuzla/build/meson-private"
-	fi
-fi
-
-######################################################################
-#   googletest
-######################################################################
-PHASE="building googletest for KLEE"
-if [ $FROM -le 4  -a "$BUILD_KLEE" = "yes" ]; then
-	if [ ! -d googletest ]; then
-		download_zip https://github.com/google/googletest/archive/release-1.7.0.zip || exitmsg "Downloading googletest"
-		mv googletest-release-1.7.0 googletest || exitmsg "error"
-		rm -f release-1.7.0.zip
-	fi
-
-	pushd googletest
-	mkdir -p build
-	pushd build
-	if [ ! -d CMakeFiles ]; then
-		cmake ..
-	fi
-
-	build || clean_and_exit 1
-	# copy the libraries to LLVM build, there is a "bug" in llvm-config
-	# that requires them
-	if [ -d ${ABS_SRCDIR}/llvm-${LLVM_VERSION}/build/lib ]; then
-	  cp *.a ${ABS_SRCDIR}/llvm-${LLVM_VERSION}/build/lib
-	fi
-
-	popd; popd
-fi
-
-if [ "`pwd`" != $ABS_SRCDIR ]; then
-	exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
-fi
-
-PHASE="building Z3 for KLEE"
-if [ "$BUILD_Z3" = "yes" ]; then
-	######################################################################
-	#   Z3
-	######################################################################
-	if [ $FROM -le 4 -a "$BUILD_KLEE" = "yes" ]; then
-		if [ ! -d "z3" ]; then
-			git_clone_or_pull git://github.com/Z3Prover/z3 -b "z3-4.8.4" z3
-		fi
-
-		mkdir -p "z3/build" && pushd "z3/build"
-		if [ ! -d CMakeFiles ]; then
-			cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX \
-				 -DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
-				 || clean_and_exit 1 "git"
-		fi
-
-		make && make install
-		popd
-	fi
-fi # BUILD_Z3
-
-if [ "`pwd`" != $ABS_SRCDIR ]; then
-	exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
-fi
-
 
 ######################################################################
 #   KLEE
