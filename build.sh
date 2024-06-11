@@ -336,7 +336,7 @@ check()
 			exitmsg "Invalid LLVM src directory given: $WITH_LLVM_DIR"
 		fi
 	fi
-	if [ "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
+	if [ $FROM -le 4 -a "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
 		exitmsg "Need z3 from package or enable building STP or Z3 or Bitwuzla by using 'build-stp' or 'build-z3' or 'build-bitwuzla' argument."
 	fi
 }

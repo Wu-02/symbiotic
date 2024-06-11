@@ -283,7 +283,6 @@ def find_executable(program, fallback=None, exitOnError=True):
         return os.path.isfile(programPath) and os.access(programPath, os.X_OK)
 
     dirs = os.environ['PATH'].split(os.path.pathsep)
-    print(dirs)
     dirs.append(os.path.curdir)
 
     for dir_ in dirs:

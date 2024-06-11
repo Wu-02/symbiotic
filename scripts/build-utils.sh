@@ -49,7 +49,7 @@ clean_and_exit()
 	if [ "$2" = "git" ]; then
 		echo "run git clean -xdf to clean up."
 	else
-		rm -rf *
+		echo "run rm -rf $(pwd)/* to clean up"
 	fi
 
 	exitmsg "Exited with code $CODE"

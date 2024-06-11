@@ -28,7 +28,7 @@ from symbiotic.exceptions import SymbioticException
 from symbiotic.witnesses.witnesses import GraphMLWriter
 from symbiotic.witnesses.YAMLwitnesswriter import YAMLWriter
 
-
+import sys
 from sys import version_info
 from sys import version_info
 if version_info < (3, 0):
