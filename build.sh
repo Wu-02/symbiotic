@@ -757,10 +757,6 @@ fi
 ######################################################################
 PHASE="building Clam"
 if [ $FROM -le 6 ]; then
-	if [ ! -d clam-${LLVM_VERSION} ]; then
-    git_clone_or_pull "https://github.com/seahorn/clam" clam
-	fi
-
 	mkdir -p clam/build-${LLVM_VERSION}
 	pushd clam/build-${LLVM_VERSION}
 

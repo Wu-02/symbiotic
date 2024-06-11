@@ -31,4 +31,3 @@ llvm-*/
 lib/symbioticpy/symbiotic/versions.py
 
 *.vscode
-clam
