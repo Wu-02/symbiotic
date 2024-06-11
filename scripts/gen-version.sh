@@ -37,7 +37,7 @@ if [ "$BUILD_Z3" = "yes" ]; then
 fi
 
 if [ "$BUILD_KLEE" = "yes" ]; then
-	pushd klee/build-${LLVM_VERSION} || exit 1
+	pushd klee/build || exit 1
 	KLEE_VERSION=`git rev-parse HEAD`
 	KLEE_BUILD_TYPE=$(grep 'CMAKE_BUILD_TYPE[:=]' CMakeCache.txt | sed 's@.*=\(.*\)@\1@')
 	KLEE_RUNTIME_BUILD_TYPE=$(grep '^KLEE_RUNTIME_BUILD_TYPE[^-]' CMakeCache.txt | sed 's@.*=\(.*\)@\1@')

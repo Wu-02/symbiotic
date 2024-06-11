@@ -22,10 +22,14 @@ for LLVM in $PREFIX/llvm-*; do
 		mkdir -p "$LLVM/lib" "$LLVM/lib32"
 
 		FILES="$FILES ${LLVM#install/}/lib/$OUT"
-		$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -o $LLVM/lib/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		if [ ! -f "$LLVM/lib/$OUT" ]; then
+			$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -o $LLVM/lib/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		fi
 
 		FILES="$FILES ${LLVM#install/}/lib32/$OUT"
-		$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -m32 -o $LLVM/lib32/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		if [ ! -f "$LLVM/lib32/$OUT" ]; then
+			$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -m32 -o $LLVM/lib32/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		fi
 	done
 done
 
@@ -41,16 +45,15 @@ for LLVM in $PREFIX/llvm-*; do
 		OUT="${OUT%*.c}.bc" # change .c for .bc
 
 		mkdir -p "$(dirname $LLVM/lib/$OUT)"
-		$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -o $LLVM/lib/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		if [ ! -f "$LLVM/lib/$OUT" ]; then
+			$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -o $LLVM/lib/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		fi
 		FILES="$FILES ${LLVM#install/}/lib/$OUT"
 
 		mkdir -p "$(dirname $LLVM/lib32/$OUT)"
-		$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -m32 -o $LLVM/lib32/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		if [ ! -f "$LLVM/lib32/$OUT" ]; then
+			$CLANG $CPPFLAGS -O3 -emit-llvm -c $F -m32 -o $LLVM/lib32/$OUT $CPPFLAGS $CFLAGS $LDFLAGS
+		fi
 		FILES="$FILES ${LLVM#install/}/lib32/$OUT"
 	done
 done
-
-
-
-echo "To add precompiled files to distribution, run this command from install/ folder:"
-echo "git add $FILES"

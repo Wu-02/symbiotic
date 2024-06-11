@@ -4,7 +4,7 @@ set -e
 
 apt-get update
 
-PACKAGES="curl wget rsync make cmake unzip gcc-multilib xz-utils python3 python3-pip zlib1g-dev git build-essential ninja-build pkg-config"
+PACKAGES="llvm-14 curl wget rsync make cmake unzip gcc-multilib xz-utils python3 pipx zlib1g-dev git build-essential ninja-build pkg-config m4 zlib1g-dev libsqlite3-dev"
 
 # install clang if there is not suitable compiler
 if ! g++ --version &>/dev/null; then
@@ -51,8 +51,5 @@ if [ "$INSTALL_ZLIB" = "y" ]; then
 	PACKAGES="$PACKAGES zlib1g"
 fi
 
-
-
-
-
 apt-get install $PACKAGES
+pipx install meson lit

@@ -159,37 +159,8 @@ fi
 # strip binaries unless we are in a CI job, it will save us 500 MB
 if [ -z "$CI" ]; then
 	for B in $BINARIES $LIBRARIES; do
-		echo "Stripping $B"
-		test -w "$B" && strip "$B"
+		if compgen -G $B > /dev/null; then
+			test -w "$B" && strip "$B"
+		fi
 	done
-fi
-
-git init
-git add \
-	$BINARIES \
-	$BCFILES \
-	$SCRIPTS \
-	$LIBRARIES \
-	$DEPENDENCIES \
-	$INSTR\
-	bin/symbiotic \
-	bin/kleetester.py \
-	bin/gen-c \
-	include/symbiotic.h \
-	include/symbiotic-size_t.h \
-	$(find lib -name '*.c')\
-	$(find . -name '*.bc')\
-	properties/* \
-	$(find lib/symbioticpy/symbiotic -name '*.py')\
-	LICENSE.txt README.md
-	#$LLVM_PREFIX/include/stddef.h \
-
-git commit -m "Create Symbiotic distribution `date`" || true
-
-# remove unnecessary files
-# git clean -xdf
-
-if [ "x$ARCHIVE" = "xyes" ]; then
-	git archive --prefix "$ARCHIVE_PREFIX" -o symbiotic.zip -9 --format zip HEAD
-	mv symbiotic.zip ..
 fi

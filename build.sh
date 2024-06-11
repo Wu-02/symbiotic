@@ -34,7 +34,7 @@ ABS_SRCDIR=`abspath $SRCDIR`
 
 usage()
 {
-	echo "$0 [shell] [no-llvm] [update] [archive | full-archive] [slicer | scripts | klee | witness | bin] OPTS"
+	echo "$0 [shell] [no-llvm] [update] [slicer | scripts | klee | witness | bin] OPTS"
 	echo "" # new line
 	echo -e "shell    - run shell with environment set"
 	echo -e "no-llvm  - skip compiling llvm"
@@ -45,10 +45,10 @@ usage()
 	echo -e "with-llvm-src=path - use llvm sources from path"
 	echo -e "llvm-version=ver   - use this version of llvm"
 	echo -e "build-type=TYPE    - set Release/Debug build"
+	echo -e "build-z3           - build and use z3 in KLEE"
+	echo -e "build-bitwuzla     - build and use bitwuzla in KLEE"
 	echo -e "build-klee         - build KLEE (default: yes)"
 	echo -e "build-nidhugg      - build nidhugg bug-finding tool (default: no)"
-	echo -e "archive            - create a zip file with symbiotic"
-	echo -e "full-archive       - create a zip file with symbiotic and add non-standard dependencies"
 	echo "" # new line
 	echo -e "slicer, scripts,"
 	echo -e "klee, witness"
@@ -102,13 +102,9 @@ BUILD_NIDHUGG="no"
 
 
 HAVE_32_BIT_LIBS=$(if check_32_bit; then echo "yes"; else echo "no"; fi)
-# HAVE_GTEST=$(if check_gtest; then echo "yes"; else echo "no"; fi)
+HAVE_Z3=$(if check_z3; then echo "yes"; else echo "no"; fi)
 WITH_ZLIB=$(if check_zlib; then echo "no"; else echo "yes"; fi)
-# ENABLE_TCMALLOC=$(if check_tcmalloc; then echo "on"; else echo "off"; fi)
 
-ARCHIVE="no"
-FULL_ARCHIVE="no"
-ARCHIVE_PREFIX="symbiotic/"
 PRECOMPILE_BITCODE="yes"
 
 while [ $# -gt 0 ]; do
@@ -156,19 +152,15 @@ while [ $# -gt 0 ]; do
 		with-zlib)
 			WITH_ZLIB="yes"
 		;;
+		build-bitwuzla)
+			BUILD_BITWUZLA="yes"
+		;;
+		build-z3)
+			BUILD_Z3="yes"
+		;;
 		build-predator)
 			BUILD_PREDATOR="yes"
 		;;
-		archive)
-			ARCHIVE="yes"
-		;;
-		full-archive)
-			ARCHIVE="yes"
-			FULL_ARCHIVE="yes"
-		;;
-        archive-prefix=*)
-            ARCHIVE_PREFIX=${1##*=}
-        ;;
 		with-llvm=*)
 			WITH_LLVM=${1##*=}
 		;;
@@ -343,7 +335,9 @@ check()
 			exitmsg "Invalid LLVM src directory given: $WITH_LLVM_DIR"
 		fi
 	fi
-
+	if [ "$BUILD_Z3" = "no" -a "$BUILD_BITWUZLA" = "no" ]; then
+		exitmsg "Need z3 from package or enable building STP or Z3 or Bitwuzla by using 'build-stp' or 'build-z3' or 'build-bitwuzla' argument."
+	fi
 }
 
 # check if we have everything we need
@@ -623,14 +617,14 @@ fi
 ######################################################################
 PHASE="building zlib"
 if [ $FROM -le 2 -a $WITH_ZLIB = "yes" ]; then
-	git_clone_or_pull https://github.com/madler/zlib
+	git_clone_or_pull https://github.com/madler/zlib zlib
 	cd zlib || exitmsg "error"
 
 	if [ ! -d CMakeFiles ]; then
 		cmake -DCMAKE_INSTALL_PREFIX=$PREFIX
 	fi
 
-	(make "$OPTS" && make install) || exitmsg  "Building and installing ZLib"
+	(make $OPTS && make install) || exitmsg  "Building and installing ZLib"
 
 	cd -
 fi
