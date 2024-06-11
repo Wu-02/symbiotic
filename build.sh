@@ -95,6 +95,7 @@ BUILD_BITWUZLA='no'
 BUILD_SVF='no'
 BUILD_PREDATOR='no'
 BUILD_LLVM2C='no'
+BUILD_LLVM2C='no'
 
 BUILD_KLEE="yes"
 BUILD_WITCH_KLEE="no"
@@ -552,7 +553,7 @@ if [ $FROM -le 1 ]; then
 	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
 	pushd build-${LLVM_VERSION} || exitmsg "error"
 
-	# if [ ! -d CMakeFiles ]; then
+	if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 			-DCMAKE_INSTALL_LIBDIR:PATH=lib \
@@ -564,7 +565,7 @@ if [ $FROM -le 1 ]; then
 			-DCMAKE_INSTALL_RPATH="\$ORIGIN/../lib" \
 			${SVF_FLAGS} \
 			|| clean_and_exit 1 "git"
-	# fi
+	fi
 
 	(build && make install) || exitmsg "Building and installing DG"
 	popd
@@ -748,9 +749,49 @@ if [ $FROM -le 6 -a "$BUILD_PREDATOR" = "yes" ]; then
 fi
 
 if [ "`pwd`" != $ABS_SRCDIR ]; then
-       exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
+	exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
 fi
 
+######################################################################
+#   Clam
+######################################################################
+PHASE="building Clam"
+if [ $FROM -le 6 ]; then
+	if [ ! -d clam-${LLVM_VERSION} ]; then
+    git_clone_or_pull "https://github.com/seahorn/clam" clam
+	fi
+
+	mkdir -p clam/build-${LLVM_VERSION}
+	pushd clam/build-${LLVM_VERSION}
+
+	# build prepare and install lib and scripts
+	if [ ! -d CMakeFiles ]; then
+		cmake .. \
+			-DLLVM_SRC_PATH="$LLVM_SRC_PATH" \
+			-DLLVM_BUILD_PATH="$LLVM_BUILD_PATH" \
+			-DLLVM_DIR=$LLVM_DIR \
+			-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+			-DCMAKE_INSTALL_PREFIX=$LLVM_PREFIX \
+			-DCMAKE_INSTALL_LIBDIR:PATH=$LLVM_PREFIX/lib \
+			-DCLAM_LIBS_TYPE=SHARED \
+			|| clean_and_exit 1
+	fi
+
+	if [ ! -d crab ]; then
+		cmake --build . --target crab && cmake .. || clean_and_exit 1
+	fi
+
+	if [ ! -d llvm-seahorn ]; then
+		cmake --build . --target extra && cmake ..
+	fi
+
+	(cmake --build . --target install ) || clean_and_exit 1
+	popd
+fi
+
+if [ "`pwd`" != $ABS_SRCDIR ]; then
+       exitmsg "Inconsistency in the build script, should be in $ABS_SRCDIR"
+fi
 
 ######################################################################
 #   instrumentation
