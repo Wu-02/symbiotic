@@ -57,7 +57,7 @@ usage()
 	echo -e "OPTS = options for make (i. e. -j8)"
 }
 
-LLVM_VERSION_DEFAULT=10.0.1
+LLVM_VERSION_DEFAULT=14.0.6
 get_llvm_version()
 {
 	# check whether we have llvm already present
@@ -70,12 +70,6 @@ get_llvm_version()
 		echo ${LLVM_VERSION_DEFAULT}
 	fi
 }
-
-export PREFIX=${PREFIX:-`pwd`/install}
-
-# export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
-# export C_INCLUDE_PATH="$PREFIX/include:$C_INCLUDE_PATH"
-# export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig:$PKG_CONFIG_PATH"
 
 FROM='0'
 NO_LLVM='0'
@@ -190,6 +184,8 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
+
+export PREFIX=${PREFIX:-`pwd`/$BUILD_TYPE}
 
 if [ "x$OPTS" = "x" ]; then
 	OPTS='-j1'
@@ -394,14 +390,14 @@ build_llvm()
 		popd
 	fi
 
-	mkdir -p llvm-${LLVM_VERSION}/build
-	pushd llvm-${LLVM_VERSION}/build
+	mkdir -p llvm-${LLVM_VERSION}/$BUILD_TYPE
+	pushd llvm-${LLVM_VERSION}/$BUILD_TYPE
 
 	# configure llvm
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		EXTRA_FLAGS=
 		if [ "x${BUILD_TYPE}" = "xDebug" ]; then
-			EXTRA_FLAGS=-DLLVM_ENABLE_ASSERTIONS=ON
+			EXTRA_FLAGS="-DLLVM_ENABLE_ASSERTIONS=ON"
 		fi
 
 		if [ $LLVM_MAJOR_VERSION -ge 9 ]; then
@@ -412,21 +408,30 @@ build_llvm()
         if [ "$LLVM_DYLIB" = "on" ]; then
 			EXTRA_FLAGS="$EXTRA_FLAGS -DLLVM_LINK_DYLIB=on"
         fi
+
+		if [ "$OSTYPE" = "linux-gnu" ]; then
+			EXTRA_FLAGS="$EXTRA_FLAGS -DLLVM_USE_SPLIT_DWARF=ON"
+		fi
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
+			-DCMAKE_INSTALL_PREFIX=${LLVM_PREFIX}\
 			-DLLVM_INCLUDE_EXAMPLES=OFF \
+			-DLLVM_INCLUDE_BENCHMARKS=OFF \
 			-DLLVM_INCLUDE_DOCS=OFF \
 			-DLLVM_BUILD_TESTS=OFF\
 			-DLLVM_BUILD_TESTS=OFF\
 			-DLLVM_ENABLE_TIMESTAMPS=OFF \
 			-DLLVM_TARGETS_TO_BUILD="X86" \
 			-DLLVM_ENABLE_PIC=ON \
+			-DLLVM_BUILD_LLVM_DYLIB=ON \
+			-DLLVM_USE_LINKER=lld \
+			-DLLVM_RAM_PER_LINK_JOB=1000 \
 			${EXTRA_FLAGS} \
 			 || clean_and_exit
-	fi
+	# fi
 
 	# build llvm
-	ONLY_TOOLS="$LLVM_TOOLS" build
+	ONLY_TOOLS="$LLVM_TOOLS" build && make install
 	# copy the generated stddef.h due to compilation of instrumentation libraries
 	#mkdir -p "$LLVM_PREFIX/include"
 	#cp "lib/clang/${LLVM_VERSION}/include/stddef.h" "$LLVM_PREFIX/include" || exitmsg "Copying stddef.h"
@@ -447,7 +452,7 @@ PHASE="setting up LLVM"
 if [ $FROM -eq 0 -a $NO_LLVM -ne 1 ]; then
 	if [ -z "$WITH_LLVM" ]; then
 		build_llvm
-		LLVM_LOCATION=llvm-${LLVM_VERSION}/build
+		LLVM_LOCATION=llvm-${LLVM_VERSION}/$BUILD_TYPE
 
 	else
 		LLVM_LOCATION=$WITH_LLVM
@@ -470,9 +475,9 @@ elif [ $LLVM_MAJOR_VERSION -ge 3 -a $LLVM_MINOR_VERSION -ge 9 ]; then
 fi
 
 if [ -z "$WITH_LLVM" ]; then
-	export LLVM_DIR=$ABS_RUNDIR/llvm-${LLVM_VERSION}/build/$LLVM_CMAKE_CONFIG_DIR
-	export LLVM_BUILD_PATH=$ABS_RUNDIR/llvm-${LLVM_VERSION}/build/
-	export LLVM_CONFIG=${ABS_SRCDIR}/llvm-${LLVM_VERSION}/build/bin/llvm-config
+	export LLVM_DIR=$LLVM_PREFIX/$LLVM_CMAKE_CONFIG_DIR
+	export LLVM_BUILD_PATH=$LLVM_PREFIX
+	export LLVM_CONFIG=$LLVM_PREFIX/bin/llvm-config
 else
 	export LLVM_DIR=$WITH_LLVM/$LLVM_CMAKE_CONFIG_DIR
 	export LLVM_BUILD_PATH=$WITH_LLVM
@@ -512,8 +517,8 @@ if [ $FROM -le 1 -a $BUILD_SVF = "yes" ]; then
 
 	# download the dg library
 	pushd "$SRCDIR/SVF" || exitmsg "Cloning failed"
-	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
-	pushd build-${LLVM_VERSION} || exitmsg "error"
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 
 	if [ ! -d CMakeFiles ]; then
 
@@ -545,13 +550,13 @@ if [ $FROM -le 1 ]; then
 	fi
 
 	if [ -d $SRCDIR/SVF ]; then
-		SVF_FLAGS="-DSVF_DIR=$ABS_SRCDIR/SVF/build-${LLVM_VERSION}"
+		SVF_FLAGS="-DSVF_DIR=$ABS_SRCDIR/SVF/build-${LLVM_VERSION}-${BUILD_TYPE}"
 	fi
 
 	# download the dg library
 	pushd "$SRCDIR/dg" || exitmsg "Cloning failed"
-	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
-	pushd build-${LLVM_VERSION} || exitmsg "error"
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 
 	if [ ! -d CMakeFiles ]; then
 		cmake .. \
@@ -587,8 +592,8 @@ if [ $FROM -le 1 ]; then
 	fi
 
 	pushd "$SRCDIR/sbt-slicer" || exitmsg "Cloning failed"
-	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
-	pushd build-${LLVM_VERSION} || exitmsg "error"
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 	if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
@@ -668,7 +673,7 @@ if [ $FROM -le 4  -a "$BUILD_NIDHUGG" = "yes" ]; then
 		git_clone_or_pull "https://github.com/nidhugg/nidhugg"
 	fi
 
-	mkdir -p nidhugg/build-${LLVM_VERSION}
+	mkdir -p nidhugg/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	pushd nidhugg
 	# get the immer submodule
@@ -676,7 +681,7 @@ if [ $FROM -le 4  -a "$BUILD_NIDHUGG" = "yes" ]; then
 	git submodule update
 	popd
 
-	pushd nidhugg/build-${LLVM_VERSION}
+	pushd nidhugg/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	if [ "x$BUILD_TYPE" = "xRelease" ]; then
 		NIDHUGG_OPTIONS=""
@@ -687,7 +692,7 @@ if [ $FROM -le 4  -a "$BUILD_NIDHUGG" = "yes" ]; then
 	if [ ! -f "config.h" ]; then
 
 		OLD_PATH="$PATH"
-		PATH="$ABS_SRCDIR/llvm-${LLVM_VERSION}/build/bin":$PATH
+		PATH="$ABS_SRCDIR/llvm-${LLVM_VERSION}/$BUILD_TYPE/bin":$PATH
 
 		autoreconf --install ..
 		../configure --prefix="$LLVM_PREFIX" CXXFLAGS="-I$(pwd)/../deps/immer" \
@@ -734,7 +739,7 @@ if [ $FROM -le 6 -a "$BUILD_PREDATOR" = "yes" ]; then
 	pushd predator-${LLVM_VERSION}
 
 	if [ ! -f cl_build/CMakeCache.txt ]; then
-	        ./switch-host-llvm.sh ${ABS_SRCDIR}/llvm-${LLVM_VERSION}/build/${LLVM_CMAKE_CONFIG_DIR}
+	        ./switch-host-llvm.sh ${ABS_SRCDIR}/llvm-${LLVM_VERSION}/$BUILD_TYPE/${LLVM_CMAKE_CONFIG_DIR}
 	fi
 
     build || exitmsg  "Building Predator"
@@ -757,11 +762,15 @@ fi
 ######################################################################
 PHASE="building Clam"
 if [ $FROM -le 6 ]; then
-	mkdir -p clam/build-${LLVM_VERSION}
-	pushd clam/build-${LLVM_VERSION}
+	if [  "x$UPDATE" = "x1" -o -z "$(ls -A $SRCDIR/clam)" ]; then
+		git_submodule_init
+	fi
+
+	mkdir -p clam/build-${LLVM_VERSION}-${BUILD_TYPE}
+	pushd clam/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	# build prepare and install lib and scripts
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DLLVM_SRC_PATH="$LLVM_SRC_PATH" \
 			-DLLVM_BUILD_PATH="$LLVM_BUILD_PATH" \
@@ -771,14 +780,14 @@ if [ $FROM -le 6 ]; then
 			-DCMAKE_INSTALL_LIBDIR:PATH=$LLVM_PREFIX/lib \
 			-DCLAM_LIBS_TYPE=SHARED \
 			|| clean_and_exit 1
-	fi
+	# fi
 
 	if [ ! -d crab ]; then
-		cmake --build . --target crab && cmake .. || clean_and_exit 1
+		(cmake --build . --target crab && cmake ..) || clean_and_exit 1
 	fi
 
 	if [ ! -d llvm-seahorn ]; then
-		cmake --build . --target extra && cmake ..
+		(cmake --build . --target extra && cmake ..) || clean_and_exit 1
 	fi
 
 	(cmake --build . --target install ) || clean_and_exit 1
@@ -806,8 +815,8 @@ if [ $FROM -le 6 ]; then
 		./bootstrap-json.sh || exitmsg "Failed generating json files"
 	fi
 
-	mkdir -p build-${LLVM_VERSION}
-	pushd build-${LLVM_VERSION}
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE}
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE}
 	if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
@@ -838,8 +847,8 @@ fi
 PHASE="building LLVMsbt.so"
 if [ $FROM -le 6 ]; then
 
-	mkdir -p transforms/build-${LLVM_VERSION}
-	pushd transforms/build-${LLVM_VERSION}
+	mkdir -p transforms/build-${LLVM_VERSION}-${BUILD_TYPE}
+	pushd transforms/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	# build prepare and install lib and scripts
 	if [ ! -d CMakeFiles ]; then

@@ -14,6 +14,7 @@
 	path = klee
 	url = https://github.com/UnitTestBot/klee.git
 	branch = testcomp24
+	ignore = untracked
 [submodule "llvm2c"]
 	path = llvm2c
 	url = https://github.com/staticafi/llvm2c

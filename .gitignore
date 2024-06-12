@@ -31,3 +31,6 @@ llvm-*/
 lib/symbioticpy/symbiotic/versions.py
 
 *.vscode
+
+Release
+RelWithDebInfo

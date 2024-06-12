@@ -4,9 +4,15 @@ if [  "x$UPDATE" = "x1" -o -z "$(ls -A $SRCDIR/klee)" ]; then
 	git_submodule_init
 fi
 
-mkdir -p klee/build
-pushd klee/build
-BASE=$(abspath ./subprojects) BITWUZLA_VERSION="0.3.2" BITWUZLA_COMMIT="0.3.2" SOLVERS="bitwuzla" GTEST_VERSION=1.11.0 ../scripts/build/build.sh solvers gtest
+deps="solvers"
+# we should reuse gtest if we built llvm
+if [ ! -z "$WITH_LLVM" -a $LLVM_MAJOR_VERSION -ge 9 ]; then
+	deps="$deps gtest"
+fi
+
+mkdir -p klee/build-${LLVM_VERSION}-${BUILD_TYPE}
+pushd klee/build-${LLVM_VERSION}-${BUILD_TYPE}
+BASE=$(abspath ./subprojects) BITWUZLA_VERSION="0.3.2" BITWUZLA_COMMIT="0.3.2" SOLVERS="bitwuzla" GTEST_VERSION=1.11.0 ../scripts/build/build.sh $deps
 Z3_FLAGS="-DENABLE_SOLVER_Z3=OFF"
 BITWUZLA_FLAGS="-DENABLE_SOLVER_BITWUZLA=OFF"
 

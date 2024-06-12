@@ -333,8 +333,8 @@ if [ $FROM -le 1 ]; then
 
 	# download the dg library
 	pushd "$SRCDIR/dg" || exitmsg "Cloning failed"
-	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
-	pushd build-${LLVM_VERSION} || exitmsg "error"
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 
 	if [ ! -d CMakeFiles ]; then
 		cmake .. \
@@ -368,8 +368,8 @@ if [ $FROM -le 1 ]; then
 	fi
 
 	pushd "$SRCDIR/sbt-slicer" || exitmsg "Cloning failed"
-	mkdir -p build-${LLVM_VERSION} || exitmsg "error"
-	pushd build-${LLVM_VERSION} || exitmsg "error"
+	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
+	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 	if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
