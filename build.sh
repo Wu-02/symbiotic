@@ -520,7 +520,7 @@ if [ $FROM -le 1 -a $BUILD_SVF = "yes" ]; then
 	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 
 		export LLVM_SRC="$LLVM_SRC_PATH"
 		export LLVM_OBJ="$LLVM_BUILD_PATH"
@@ -529,7 +529,7 @@ if [ $FROM -le 1 -a $BUILD_SVF = "yes" ]; then
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 			-DCMAKE_INSTALL_PREFIX=$LLVM_PREFIX \
 			|| clean_and_exit 1 "git"
-	fi
+	# fi
 
 	(build && make install) || exitmsg "Building and installing SVF"
 	popd
@@ -558,7 +558,7 @@ if [ $FROM -le 1 ]; then
 	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 			-DCMAKE_INSTALL_LIBDIR:PATH=lib \
@@ -570,7 +570,7 @@ if [ $FROM -le 1 ]; then
 			-DCMAKE_INSTALL_RPATH="\$ORIGIN/../lib" \
 			${SVF_FLAGS} \
 			|| clean_and_exit 1 "git"
-	fi
+	# fi
 
 	(build && make install) || exitmsg "Building and installing DG"
 	popd
@@ -594,7 +594,7 @@ if [ $FROM -le 1 ]; then
 	pushd "$SRCDIR/sbt-slicer" || exitmsg "Cloning failed"
 	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
 	pushd build-${LLVM_VERSION}-${BUILD_TYPE} || exitmsg "error"
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
 			-DCMAKE_INSTALL_LIBDIR:PATH=lib \
@@ -607,7 +607,7 @@ if [ $FROM -le 1 ]; then
 			-DCMAKE_INSTALL_PREFIX=$LLVM_PREFIX \
 			-DCMAKE_INSTALL_RPATH="\$ORIGIN/../lib" \
 			|| clean_and_exit 1 "git"
-	fi
+	# fi
 
 	(build && make install) || exitmsg  "Building and installing sbt-slicer"
 	popd
@@ -626,9 +626,9 @@ if [ $FROM -le 2 -a $WITH_ZLIB = "yes" ]; then
 	git_clone_or_pull https://github.com/madler/zlib zlib
 	cd zlib || exitmsg "error"
 
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake -DCMAKE_INSTALL_PREFIX=$PREFIX
-	fi
+	# fi
 
 	(make $OPTS && make install) || exitmsg  "Building and installing ZLib"
 
@@ -817,7 +817,7 @@ if [ $FROM -le 6 ]; then
 
 	mkdir -p build-${LLVM_VERSION}-${BUILD_TYPE}
 	pushd build-${LLVM_VERSION}-${BUILD_TYPE}
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DCMAKE_BUILD_TYPE=${BUILD_TYPE}\
 			-DCMAKE_INSTALL_LIBDIR:PATH=lib \
@@ -829,7 +829,7 @@ if [ $FROM -le 6 ]; then
 			-DDG_PATH=$ABS_SRCDIR/dg \
 			-DCMAKE_INSTALL_PREFIX=$LLVM_PREFIX \
 			|| clean_and_exit 1 "git"
-	fi
+	# fi
 
 	(build && make install) || exitmsg  "Building and installing sbt-instrumentation"
 
@@ -851,7 +851,7 @@ if [ $FROM -le 6 ]; then
 	pushd transforms/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	# build prepare and install lib and scripts
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DLLVM_SRC_PATH="$LLVM_SRC_PATH" \
 			-DLLVM_BUILD_PATH="$LLVM_BUILD_PATH" \
@@ -860,7 +860,7 @@ if [ $FROM -le 6 ]; then
 			-DCMAKE_INSTALL_PREFIX=$PREFIX \
 			-DCMAKE_INSTALL_LIBDIR:PATH=$LLVM_PREFIX/lib \
 			|| clean_and_exit 1
-	fi
+	# fi
 
 	(build && make install) || clean_and_exit 1
 	popd
@@ -875,13 +875,13 @@ fi
 ######################################################################
 PHASE="installing files and function models"
 if [ $FROM -le 6 ]; then
-	if [ ! -d CMakeFiles ]; then
+	# if [ ! -d CMakeFiles ]; then
 		cmake . \
 			-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
 			-DCMAKE_INSTALL_PREFIX=$PREFIX \
 			-DCMAKE_INSTALL_LIBDIR:PATH=$LLVM_PREFIX/lib \
 			|| exitmsg "Configuring files installation"
-	fi
+	# fi
 
 	(build && make install) || exitmsg "Installing files"
 
