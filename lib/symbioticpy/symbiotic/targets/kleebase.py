@@ -149,9 +149,10 @@ def _parseKtest(pathFile):
         print('unrecognized file')
         sys.exit(1)
     version, = unpack('>i', f.read(4))
-    if version > 3:
-       print('unrecognized version')
-       sys.exit(1)
+    if version > 4:
+        print('unrecognized version')
+        sys.exit(1)
+        
     # skip args
     numArgs, = unpack('>i', f.read(4))
     for i in range(numArgs):
@@ -167,11 +168,20 @@ def _parseKtest(pathFile):
     for i in range(numObjects):
         size, = unpack('>i', f.read(4))
         name = f.read(size)
+        address = unpack('>Q', f.read(8))
         size, = unpack('>i', f.read(4))
         bytes = f.read(size)
-        objects.append((name, bytes))
-
+        pointers = []
+        if version >= 4:
+            numPointers, = unpack('>i', f.read(4))
+            for _ in range(numPointers):
+                offset, = unpack('>i', f.read(4))
+                index, = unpack('>i', f.read(4))
+                indexOffset, = unpack('>i', f.read(4))
+                pointers.append((offset, index, indexOffset))
+        objects.append((name, address, bytes, pointers))
     f.close()
+       
     return objects
 
 def _dumpObjects(ktestfile):

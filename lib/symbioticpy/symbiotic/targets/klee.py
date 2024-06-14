@@ -421,15 +421,17 @@ class SymbioticTool(KleeBase):
 
         return None
     
-    def change_false_to_unknown_at_step_case(func):
+    def bmc_check(func):
         def wrapper(self, *args):
             result = func(self, *args)
-            if self._options.phase == 2 and result.startswith('false'):
-                return 'unknown'
+            if self._options.phase == 2 and result.startswith('true'):
+                result = 'unknown'
+            if self._options.phase == 3 and result.startswith('false'):
+                result = 'unknown'
             return result
         return wrapper
 
-    @change_false_to_unknown_at_step_case
+    @bmc_check
     def determine_result(self, returncode, returnsignal, output, isTimeout):
         opts = self._options
         prop = opts.property
