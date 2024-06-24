@@ -1,0 +1,27 @@
+diff --git lib/Clam/Optimizer/Optimizer.cc lib/Clam/Optimizer/Optimizer.cc
+index ef1682e..38787d1 100644
+--- lib/Clam/Optimizer/Optimizer.cc
++++ lib/Clam/Optimizer/Optimizer.cc
+@@ -660,7 +660,7 @@ bool Optimizer::runOnModule(Module &M) {
+   // or ReadOnly even if we mark it as OptimizeNone.
+   B.addAttribute(Attribute::InaccessibleMemOnly);  
+   AttributeList as = AttributeList::get(ctx, AttributeList::FunctionIndex, B);
+-  m_assumeFn = dyn_cast<Function>(M.getOrInsertFunction("verifier.assume", as,
++  m_assumeFn = dyn_cast<Function>(M.getOrInsertFunction("__VERIFIER_assume", as,
+                                                         Type::getVoidTy(ctx),
+                                                         Type::getInt1Ty(ctx))
+                                       .getCallee());
+@@ -728,6 +728,13 @@ bool Optimizer::runOnFunction(Function &F) {
+ 	  if (LI && LI->isLoopHeader(&B)) {
+ 	    auto csts = pre.getValue().to_linear_constraint_system();
+ 	    change |= instrumentBlock(csts, &B, F.getContext(), m_cg, dt, m_assumeFn);
++      if (readMemory(B)) {
++        auto cfg_builder_ptr = m_clam.getCfgBuilderMan().getCfgBuilder(F);
++        assert(cfg_builder_ptr);
++        basic_block_label_t bb_label = cfg_builder_ptr->getCrabBasicBlock(&B);
++        change |= instrumentLoadInst(pre.getValue(), cfg.get_node(bb_label),
++                  F.getContext(), m_cg, m_assumeFn);
++      }
+ 	  }
+ 	}
+       }

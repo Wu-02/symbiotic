@@ -766,11 +766,17 @@ if [ $FROM -le 6 ]; then
 		git_submodule_init
 	fi
 
+	# apply our patches for clam
+	pushd clam
+	patch -p0 --dry-run < $ABS_SRCDIR/patches/clam_optimizer.patch || exitmsg "Patching LLVM"
+	patch -p0 < $ABS_SRCDIR/patches/clam_optimizer.patch || exitmsg "Patching LLVM"
+	popd
+
 	mkdir -p clam/build-${LLVM_VERSION}-${BUILD_TYPE}
 	pushd clam/build-${LLVM_VERSION}-${BUILD_TYPE}
 
 	# build prepare and install lib and scripts
-	# if [ ! -d CMakeFiles ]; then
+	if [ ! -d CMakeFiles ]; then
 		cmake .. \
 			-DLLVM_SRC_PATH="$LLVM_SRC_PATH" \
 			-DLLVM_BUILD_PATH="$LLVM_BUILD_PATH" \
@@ -780,17 +786,17 @@ if [ $FROM -le 6 ]; then
 			-DCMAKE_INSTALL_LIBDIR:PATH=$LLVM_PREFIX/lib \
 			-DCLAM_LIBS_TYPE=SHARED \
 			|| clean_and_exit 1
-	# fi
+	fi
 
 	if [ ! -d crab ]; then
-		(cmake --build . --target crab && cmake ..) || clean_and_exit 1
+		(cmake --build . --target crab $OPTS && cmake ..) || clean_and_exit 1
 	fi
 
 	if [ ! -d llvm-seahorn ]; then
-		(cmake --build . --target extra && cmake ..) || clean_and_exit 1
+		(cmake --build . --target extra $OPTS && cmake ..) || clean_and_exit 1
 	fi
 
-	(cmake --build . --target install ) || clean_and_exit 1
+	(cmake --build . --target install $OPTS ) || clean_and_exit 1
 	popd
 fi
 
