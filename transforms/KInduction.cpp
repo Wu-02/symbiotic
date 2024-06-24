@@ -49,7 +49,9 @@ class InductiveStep : public LoopPass {
   bool runOnLoop(Loop *, LPPassManager &) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    getLoopAnalysisUsage(AU);
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    LoopPass::getAnalysisUsage(AU);
   }
 };
 
@@ -61,7 +63,7 @@ static RegisterPass<InductiveStep> IS(
     "kind-step-case", "Instrument loops for step case verification.");
 char InductiveStep::ID;
 
-CallInst *insertVerifierCall(StringRef Name, Type *Result,
+CallInst *createVerifierCall(StringRef Name, Type *Result,
                              ArrayRef<Value *> Args, Instruction *I) {
   Function *F = I->getParent()->getParent();
   Module *M = F->getParent();
@@ -153,7 +155,7 @@ bool InductiveBase::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   Instruction *TermUnreachable = SplitBlockAndInsertIfThen(
       CmpInst, Header->getTerminator(), true, nullptr, &DT, &LI);
-  insertVerifierCall("__VERIFIER_assume", Type::getVoidTy(Ctx),
+  createVerifierCall("__VERIFIER_assume", Type::getVoidTy(Ctx),
                      {ConstantInt::get(Type::getInt1Ty(Ctx), 0)},
                      TermUnreachable);
 
@@ -171,26 +173,37 @@ bool InductiveBase::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   return true;
 }
 
-// Allocate memory for a variable of given type on the stack, call
-// __VERIFIER_make_nondet to havoc its value, and load it before I. Returns the
-// load instuction (its value undetermined).
-LoadInst *createHavocked(Type *type, Instruction *I) {
+// Havoc value by insert before `I` a call to __VERIFIER_make_nondet.
+// `val` must be of pointer type and defined before `I`.
+CallInst *createHavocCall(Value *val, Instruction *I) {
   Function *F = I->getParent()->getParent();
   Module *M = F->getParent();
   LLVMContext &Ctx = F->getContext();
-  IRBuilder<> IRB(Ctx);
-  IRB.SetInsertPoint(I);
-
-  auto *sizeType = Type::getInt32Ty(Ctx);
-  AllocaInst *allocaInst = IRB.CreateAlloca(type, nullptr);
 
   const DataLayout *DL = &M->getDataLayout();
-  auto size = DL->getTypeAllocSize(type);
-  ArrayRef<Value *> args = {allocaInst, ConstantInt::get(sizeType, size),
+  auto type = dyn_cast<PointerType>(val->getType());
+  assert(type && "Value must be of pointer type.");
+  auto sz = DL->getTypeAllocSize(type->getElementType());
+  auto *sizeType = Type::getInt32Ty(Ctx);
+  ArrayRef<Value *> args = {val, ConstantInt::get(sizeType, sz),
                             ConstantDataArray::getString(Ctx, "")};
+  return createVerifierCall("__VERIFIER_make_nondet", Type::getVoidTy(Ctx),
+                            args, I);
+}
 
-  insertVerifierCall("__VERIFIER_make_nondet", Type::getVoidTy(Ctx), args, I);
-  return IRB.CreateLoad(type, allocaInst, "havoc");
+// Allocate memory for a variable of given type on the stack, call
+// __VERIFIER_make_nondet to havoc its value, and load it before I. Returns the
+// load instuction (its value undetermined).
+LoadInst *createNondetInst(Type *type, Instruction *I,
+                           const Twine &name = "havoc") {
+  Function *F = I->getParent()->getParent();
+  LLVMContext &Ctx = F->getContext();
+
+  IRBuilder<> IRB(Ctx);
+  IRB.SetInsertPoint(I);
+  AllocaInst *allocaInst = IRB.CreateAlloca(type, nullptr);
+  createHavocCall(allocaInst, I);
+  return IRB.CreateLoad(type, allocaInst, name);
 }
 
 bool isVerifierAssert(Function *call) {
@@ -208,12 +221,36 @@ bool InductiveStep::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
 
   // If a phi node in header have both incoming edge from Latch(update) and
   // Preheader (init), havoc the init value.
-  Instruction *I = Preheader->getTerminator();
+  Instruction *preheaderTermInst = Preheader->getTerminator();
   for (auto &phiNode : Header->phis()) {
     if (phiNode.getBasicBlockIndex(Preheader) != -1 &&
         phiNode.getBasicBlockIndex(Latch) != -1) {
-      LoadInst *havocInst = createHavocked(phiNode.getType(), I);
+      LoadInst *havocInst =
+          createNondetInst(phiNode.getType(), preheaderTermInst);
       phiNode.setIncomingValueForBlock(Preheader, havocInst);
+    }
+  }
+
+  // Next, we need to havoc in the preheader all memory objects that may be
+  // modified in the loop. We consider only store instructions for now, and
+  // assume that all memory location are defined prior to the header(so we
+  // can havoc them at the end of the preheader).
+  std::set<Value *> ptrs;
+  for (auto BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (auto *storeInst = dyn_cast<StoreInst>(&I)) {
+        Value *ptr = storeInst->getPointerOperand();
+        ptrs.insert(ptr);
+      }
+    }
+  }
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  for (auto ptr : ptrs) {
+    if (Instruction *inst = dyn_cast<Instruction>(ptr)) {
+      BasicBlock *defBB = inst->getParent();
+      if (DT.dominates(defBB, Preheader)) {
+        createHavocCall(ptr, preheaderTermInst);
+      }
     }
   }
 
@@ -235,7 +272,6 @@ bool InductiveStep::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   Value *bound = ConstantInt::get(counterType, K);
   Value *SGTBoundInst = B.CreateICmpSGT(CounterPhi, bound);
 
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   Instruction *TermUnreachable = SplitBlockAndInsertIfThen(
       SGTBoundInst, Header->getTerminator(), true, nullptr, &DT, &LI);
@@ -264,7 +300,7 @@ bool InductiveStep::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   }
   for (CallInst *CI : callInsts) {
     ArrayRef<Value *> args = {CI->getArgOperand(0), SLTBoundInst};
-    auto *newCI = insertVerifierCall("__VERIFIER_assert_or_assume",
+    auto *newCI = createVerifierCall("__VERIFIER_assert_or_assume",
                                      Type::getVoidTy(Ctx), args, CI);
     CI->replaceAllUsesWith(newCI);
     CI->eraseFromParent();

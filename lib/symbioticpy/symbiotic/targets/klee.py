@@ -349,12 +349,12 @@ class SymbioticTool(KleeBase):
             calls = [x for x in prop.getcalls() if x not in ['__VERIFIER_error', '__assert_fail']]
             if calls:
                 assert len(calls) == 1, "Multiple error functions unsupported yet"
-                cmd.append('--assert-fail-alias={0}'.format(calls[0]))
+                # cmd.append('--assert-fail-alias={0}'.format(calls[0]))
             # FIXME: append to all properties?
             # cmd.append('-malloc-symbolic-contents')
         elif prop.signedoverflow():
             # we instrument with __VERIFIER_error
-            cmd.append('--assert-fail-alias=__VERIFIER_error')
+            # cmd.append('--assert-fail-alias=__VERIFIER_error')
             pass
 
         if opts.exit_on_error:
@@ -424,8 +424,8 @@ class SymbioticTool(KleeBase):
     def bmc_check(func):
         def wrapper(self, *args):
             result = func(self, *args)
-            if self._options.phase == 2 and result.startswith('true'):
-                result = 'unknown'
+            # if self._options.phase == 2 and result.startswith('true'):
+            #     result = 'unknown'
             if self._options.phase == 3 and result.startswith('false'):
                 result = 'unknown'
             return result

@@ -41,17 +41,18 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
     """
 
     def __init__(self, opts):
-        self.klee = KleeTool(opts)
         self._options = opts
+        self.klee = KleeTool(opts)
         self._env = None
         self._hit_threads = False
-        self._options.phase = 1;
+        self._options.phase = 1
 
     def verifiers(self):
         prp = self._options.property
         if prp.unreachcall():
-            yield (KleeTool(self._options), None, 333)
-            yield (KleeTool(self._options), None, 333)
+            yield (self.klee, None, 5)
+            self.klee = KleeTool(self._options)
+            yield (self.klee, None, 333)
 
     def name(self):
         return 'klee'
@@ -81,17 +82,20 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
     def actions_after_slicing(self, cc):
         if self._options.phase == 2:
             output = '{0}-inv.bc'.format(cc.curfile[:cc.curfile.rfind('.')])
-            cmd = ['clam.py', '--crab-inter', '--crab-opt=add-invariants', '--crab-opt-invariants-loc=loop-header', '--crab-track=mem', '--crab-widening-delay=32', cc.curfile, '-o', output]
+            # TODO: add temp-dir and save-temps flag only in debug build
+            cmd = ['clam.py', '--crab-inter', '--crab-opt=add-invariants', '--crab-opt-invariants-loc=loop-header', '--crab-lower-unsigned-icmp', '--crab-track=mem', '--crab-widening-delay=32', f'--temp-dir={self._env.working_dir}', cc.curfile, '--save-temps', '-o', output]
             runcmd(cmd)
             cc.curfile = output
+            cc._generate_ll()
 
     def passes_after_slicing(self):
         passes = []
         
         if self._options.phase == 1:
-            passes = ['-kind-base-case', '-kind-max-backedge-count=8']
+            # passes = ['-kind-base-case', '-kind-max-backedge-count=10']
+            pass
         elif self._options.phase == 2:
-            passes = ['-kind-step-case', '-kind-k=4']
+            passes = ['-kind-step-case', '-kind-k=4', '-rename-clam-assume']
 
         # for the memsafety property, make functions behave like they have
         # side-effects, because LLVM optimizations could remove them otherwise,
@@ -113,6 +117,9 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
 
     def determine_result(self, returncode, returnsignal, output, isTimeout):
         raise NotImplementedError("This should be never called")
+    
+    def describe_error(self, llvmfile):
+        self.klee.describe_error(llvmfile)
 
     def verifier_failed(self, verifier, res, watch):
         """

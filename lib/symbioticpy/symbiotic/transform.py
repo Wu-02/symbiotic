@@ -170,7 +170,7 @@ class SymbioticCC(object):
         # Use -O0 -disable-O0-optnone to get the code without optnone attribute
         # so that it can get optimized later.
         # XXX: does -disable-llvm-passes have an effect here?
-        return ['-O0', '-disable-O0-optnone', '-disable-llvm-passes']
+        return ['-O0', '-Xclang', '-disable-O0-optnone', '-disable-llvm-passes']
 
     def _save_ll(self):
         """
@@ -876,7 +876,7 @@ class SymbioticCC(object):
         # link definition of atexit and get rid of llvm.global_dtors,
         # link also qsort before slicing as it can call function pointers
         self.link_undefined(['atexit', 'qsort'])
-        self.run_opt(['-explicit-consdes'])
+        self.run_opt(['-explicit-consdes', '-explicit-int-loads'])
 
         if not self.options.noslice:
             self.perform_slicing()

@@ -327,7 +327,7 @@ class SymbioticTool(BaseTool, SymbioticBaseTool):
                            '--use-call-paths=false',
                            '--optimize=false',
                            '--max-memory=8000']
-        if hasattr(opts, 'phase') and opts.phase == 2:
+        if hasattr(opts, 'phase') and opts.phase == 3:
             self._arguments += ['-silent-klee-assume=1']
 
 

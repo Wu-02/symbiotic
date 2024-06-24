@@ -122,7 +122,7 @@ class SymbioticVerifier(object):
         restart_counting_time()
         orig_bitcode = self.curfile
         for verifiertool, addparams, verifiertimeout in self._tool.verifiers():
-            self.curfile = orig_bitcode
+            # self.curfile = orig_bitcode
             res, watch = self._run_verifier(verifiertool, addparams, verifiertimeout)
             sw = res.lower().startswith
             # we got an answer, we can finish
